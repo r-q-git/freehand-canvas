@@ -1,0 +1,73 @@
+<div class="flex flex-column h-screen bg-gray-100">
+  <div class="p-3 bg-white shadow-2 z-5 flex flex-wrap align-items-center justify-content-between gap-3">
+    
+    <div class="flex gap-2">
+  <button pButton 
+          type="button"
+          icon="pi pi-pencil" 
+          label="Pen 1" 
+          [class.p-button-outlined]="activeTool !== 'pen1'" 
+          (click)="activeTool = 'pen1'">
+  </button>
+
+  <button pButton 
+          type="button"
+          icon="pi pi-palette" 
+          label="Pen 2" 
+          [class.p-button-outlined]="activeTool !== 'pen2'" 
+          (click)="activeTool = 'pen2'" 
+          class="p-button-secondary">
+  </button>
+
+  <button pButton 
+          type="button"
+          icon="pi pi-pencil" 
+          label="Highlighter" 
+          [class.p-button-outlined]="activeTool !== 'highlighter'" 
+          (click)="activeTool = 'highlighter'" 
+          class="p-button-help">
+  </button>
+
+  <button pButton 
+          type="button"
+          icon="pi pi-eraser" 
+          label="Eraser" 
+          [class.p-button-outlined]="activeTool !== 'eraser'" 
+          (click)="activeTool = 'eraser'" 
+          class="p-button-warning">
+  </button>
+</div>
+
+    <div class="flex align-items-center gap-4 border-left-1 border-300 pl-4" *ngIf="activeTool !== 'eraser'">
+      <div class="flex flex-column">
+        <label class="text-xs font-bold mb-1">COLOR</label>
+        <input type="color" [(ngModel)]="tools[activeTool].color" class="w-3rem h-2rem cursor-pointer">
+      </div>
+
+      <div class="flex flex-column">
+        <label class="text-xs font-bold mb-1">WIDTH: {{tools[activeTool].width}}</label>
+        <input type="range" min="1" max="100" [(ngModel)]="tools[activeTool].width">
+      </div>
+
+      <div class="flex flex-column">
+        <label class="text-xs font-bold mb-1">OPACITY: {{ (tools[activeTool].opacity * 100).toFixed(0) }}%</label>
+        <input type="range" min="0.1" max="1" step="0.1" [(ngModel)]="tools[activeTool].opacity">
+      </div>
+    </div>
+
+    <div class="ml-auto flex gap-2">
+      <button pButton icon="pi pi-download" (click)="saveSVG()" class="p-button-text"></button>
+      <button pButton icon="pi pi-refresh" (click)="allStrokes = []" class="p-button-danger p-button-text"></button>
+    </div>
+  </div>
+
+  <svg #svgElement class="flex-grow-1 w-full h-full bg-white cursor-crosshair touch-none"
+       (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)">
+    <path *ngFor="let s of allStrokes; let i = index" 
+          [attr.d]="s.path" 
+          [attr.fill]="s.color"
+          [attr.fill-opacity]="s.opacity"
+          [attr.data-index]="i">
+    </path>
+  </svg>
+</div>
