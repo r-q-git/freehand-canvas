@@ -1,4 +1,4 @@
-<div class="relative w-screen h-screen overflow-hidden bg-gray-100">
+<div class="relative h-screen overflow-hidden bg-gray-100">
   <div
     class="absolute top-0 left-0 w-full z-10 flex flex-column align-items-center p-3 pointer-events-none"
   >
@@ -74,12 +74,12 @@
 
     <div
       *ngIf="activeTool !== 'eraser'"
-      class="mt-2 bg-white shadow-4 border-round-lg p-3 pointer-events-auto w-22rem overflow-y-auto"
-      style="max-height: 80vh"
+      class="mt-2 bg-white shadow-4 text-sm border-round-lg p-3 pointer-events-auto w-18rem overflow-y-auto absolute top-10 left-0"
+      style="max-height: 100vh"
     >
       <div class="flex justify-content-between align-items-center mb-3">
-        <span class="text-sm font-bold uppercase text-500"
-          >{{ activeTool }} Settings</span
+        <span class="font-bold uppercase text-500"
+          >{{ activeTool }}</span
         >
         <button
           pButton
@@ -91,7 +91,7 @@
       </div>
 
       <div class="flex flex-column gap-3 mb-4">
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Size</label>
           <input
             type="range"
@@ -101,18 +101,18 @@
           />
           <span class="val">{{ tools[activeTool].size }}</span>
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Thinning</label>
           <input
             type="range"
-            min="-1"
+            min="0"
             max="1"
             step="0.01"
             [(ngModel)]="tools[activeTool].thinning"
           />
           <span class="val">{{ tools[activeTool].thinning }}</span>
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Streamline</label>
           <input
             type="range"
@@ -123,7 +123,7 @@
           />
           <span class="val">{{ tools[activeTool].streamline }}</span>
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Smoothing</label>
           <input
             type="range"
@@ -134,7 +134,7 @@
           />
           <span class="val">{{ tools[activeTool].smoothing }}</span>
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Easing</label>
           <select [(ngModel)]="tools[activeTool].easing">
             <option *ngFor="let opt of easingOptions" [value]="opt.value">
@@ -147,7 +147,7 @@
       <hr class="border-200" />
 
       <div class="flex flex-column gap-3 my-4">
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Taper Start</label>
           <input
             type="range"
@@ -157,7 +157,7 @@
           />
           <span class="val">{{ tools[activeTool].start.taper }}</span>
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Easing Start</label>
           <select [(ngModel)]="tools[activeTool].start.easing">
             <option *ngFor="let opt of easingOptions" [value]="opt.value">
@@ -170,7 +170,7 @@
       <hr class="border-200" />
 
       <div class="flex flex-column gap-3 my-4">
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Taper End</label>
           <input
             type="range"
@@ -180,7 +180,7 @@
           />
           <span class="val">{{ tools[activeTool].end.taper }}</span>
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Easing End</label>
           <select [(ngModel)]="tools[activeTool].end.easing">
             <option *ngFor="let opt of easingOptions" [value]="opt.value">
@@ -201,7 +201,7 @@
             class="w-3rem h-2rem border-none cursor-pointer"
           />
         </div>
-        <div class="setting-row">
+        <div class="flex align-items-center gap-1">
           <label>Stroke Width</label>
           <input
             type="range"
