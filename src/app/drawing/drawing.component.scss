@@ -1,12 +1,45 @@
-/* Ensure the SVG takes up the available space */
 :host {
-    display: block;
-    width: 100%;
-    height: 100%;
+  --tl-accent: rgb(255, 0, 0);
+  --tl-background: rgb(248, 249, 250);
+  --tl-foreground: rgb(51, 51, 51);
+  display: block;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
-svg {
-    display: block;
-    background-color: white;
-    touch-action: none; /* Critical for mobile drawing */
+.tl-container {
+  background-color: var(--tl-background);
+  width: 100%; height: 100%; position: relative;
+}
+
+.side-panel {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 280px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  padding: 16px;
+  z-index: 1000;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #666; }
+  input[type="range"] { width: 100%; margin-bottom: 12px; }
+  input[type="number"] { width: 60px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 4px; }
+}
+
+.color-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0;
+  button { 
+    height: 30px; border-radius: 4px; border: 2px solid transparent; cursor: pointer;
+    &.selected { border-color: #4285f4; }
+  }
+}
+
+.bottom-bar {
+  position: absolute; bottom: 20px; right: 20px;
+  display: flex; gap: 10px;
+  button { padding: 8px 16px; border-radius: 6px; border: 1px solid #ddd; background: white; cursor: pointer; }
 }
