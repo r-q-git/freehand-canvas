@@ -43,7 +43,7 @@ export class DrawingComponent {
   allStrokes: DrawingStroke[] = [];
   redoStack: DrawingStroke[] = [];
   activeTool: 'pen1' | 'pen2' | 'highlighter' | 'eraser' = 'pen1';
-  showSettings: boolean = true; // For Hamburger toggle
+  showSettings: boolean = false; // For Hamburger toggle
 
   currentPoints: number[][] = [];
   previewPath: string = '';
@@ -119,31 +119,42 @@ export class DrawingComponent {
   }
 
   parseSVGFile(file: File) {
-    if (!file || (!file.type.includes('svg') && !file.name.endsWith('.svg'))) return;
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(e.target.result, 'image/svg+xml');
-      const paths = doc.querySelectorAll('path');
-      const imported: DrawingStroke[] = [];
-      
-      paths.forEach(p => {
-        const d = p.getAttribute('d');
-        if (d) {
-          imported.push({
-            path: d,
-            color: p.getAttribute('fill') || '#000000',
-            opacity: parseFloat(p.getAttribute('fill-opacity') || '1'),
-            outlineColor: p.getAttribute('stroke') || 'none',
-            outlineWidth: parseFloat(p.getAttribute('stroke-width') || '0'),
-            points: [] // Coordinates are lost in static SVG, but path remains erasable
-          });
+  if (!file || (!file.type.includes('svg') && !file.name.endsWith('.svg'))) return;
+  const reader = new FileReader();
+  reader.onload = (e: any) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(e.target.result, 'image/svg+xml');
+    const paths = doc.querySelectorAll('path');
+    const imported: DrawingStroke[] = [];
+    
+    paths.forEach(p => {
+      const d = p.getAttribute('d');
+      if (d) {
+        // --- NEW LOGIC TO FIX ERASER ---
+        // We extract the numbers from the 'd' attribute to simulate points
+        // This regex finds all coordinate pairs like "100 200"
+        const coords = d.match(/[+-]?\d+(\.\d+)?/g)?.map(Number) || [];
+        const simulatedPoints: number[][] = [];
+        for (let i = 0; i < coords.length; i += 2) {
+          if (coords[i+1] !== undefined) {
+            simulatedPoints.push([coords[i], coords[i+1]]);
+          }
         }
-      });
-      this.allStrokes = [...this.allStrokes, ...imported];
-    };
-    reader.readAsText(file);
-  }
+
+        imported.push({
+          path: d,
+          color: p.getAttribute('fill') || '#000000',
+          opacity: parseFloat(p.getAttribute('fill-opacity') || '1'),
+          outlineColor: p.getAttribute('stroke') || 'none',
+          outlineWidth: parseFloat(p.getAttribute('stroke-width') || '0'),
+          points: simulatedPoints // Now the eraser has data to check!
+        });
+      }
+    });
+    this.allStrokes = [...this.allStrokes, ...imported];
+  };
+  reader.readAsText(file);
+}
 
   saveSVG() {
     const svgEl = this.svgElement.nativeElement;

@@ -2,15 +2,25 @@
   <div
     class="absolute top-0 left-0 w-full z-10 flex flex-column align-items-center p-3 pointer-events-none"
   >
+    <div class="absolute top-0 left-0 z-10 pointer-events-auto mb-2">
+      <button
+        pButton
+        icon="pi pi-bars"
+        (click)="toggleSettings()"
+        [ngClass]="{'p-button-secondary': !showSettings}"
+        title="Toggle Settings"
+      ></button>
+    </div>
+
     <div
       class="flex gap-2 bg-white shadow-4 border-round-xl p-2 pointer-events-auto align-items-center"
     >
       <button
         pButton
-        icon="pi pi-bars"
-        (click)="toggleSettings()"
+        icon="pi pi-upload"
+        (click)="triggerUpload()"
         class="p-button-text p-button-plain"
-        title="Toggle Settings"
+        title="Upload SVG"
       ></button>
 
       <div class="border-left-1 border-300 h-2rem mx-1"></div>
@@ -70,13 +80,6 @@
 
       <button
         pButton
-        icon="pi pi-upload"
-        (click)="triggerUpload()"
-        class="p-button-text p-button-plain"
-        title="Upload SVG"
-      ></button>
-      <button
-        pButton
         icon="pi pi-download"
         (click)="saveSVG()"
         class="p-button-text p-button-plain"
@@ -101,8 +104,8 @@
 
     <div
       *ngIf="activeTool !== 'eraser' && showSettings"
-      class="mt-2 shadow-4 text-sm bg-white border-round-lg p-3 mx-1 pointer-events-auto w-18rem overflow-y-auto absolute top-0 left-0"
-      style="max-height: 90vh; margin-top: 85px"
+      class="mt-6 shadow-4 text-sm bg-white border-round-lg p-3 mx-1 pointer-events-auto w-18.5rem absolute top-0 left-0"
+      style="max-height: 90vh"
     >
       <div class="flex justify-content-between align-items-center mb-3">
         <span class="font-bold uppercase text-500"
