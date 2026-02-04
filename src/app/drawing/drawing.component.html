@@ -7,6 +7,16 @@
     >
       <button
         pButton
+        icon="pi pi-bars"
+        (click)="toggleSettings()"
+        class="p-button-text p-button-plain"
+        title="Toggle Settings"
+      ></button>
+
+      <div class="border-left-1 border-300 h-2rem mx-1"></div>
+
+      <button
+        pButton
         icon="pi pi-pencil"
         label="Pen 1"
         [class.p-button-outlined]="activeTool !== 'pen1'"
@@ -28,7 +38,6 @@
         (click)="activeTool = 'highlighter'"
         class="p-button-help"
       ></button>
-
       <button
         pButton
         icon="pi pi-eraser"
@@ -56,13 +65,15 @@
         class="p-button-text p-button-plain"
         title="Redo"
       ></button>
-      <div class="border-left-1 border-300 h-2rem mx-2"></div>
+
+      <div class="border-left-1 border-300 h-2rem mx-1"></div>
+
       <button
         pButton
-        icon="pi pi-times"
-        (click)="clearCanvas()"
-        class="p-button-text p-button-danger"
-        title="Clear All"
+        icon="pi pi-upload"
+        (click)="triggerUpload()"
+        class="p-button-text p-button-plain"
+        title="Upload SVG"
       ></button>
       <button
         pButton
@@ -71,18 +82,31 @@
         class="p-button-text p-button-plain"
         title="Download SVG"
       ></button>
-      
-      
+      <button
+        pButton
+        icon="pi pi-times"
+        (click)="clearCanvas()"
+        class="p-button-text p-button-danger"
+        title="Clear All"
+      ></button>
+
+      <input
+        id="svgUpload"
+        type="file"
+        accept=".svg"
+        style="display: none"
+        (change)="handleFileUpload($event)"
+      />
     </div>
 
     <div
-      *ngIf="activeTool !== 'eraser'"
-      class="mt-2 z-10  shadow-4 text-sm border-round-lg p-3 mx-1 pointer-events-auto w-18rem overflow-y-auto absolute top-0 left-0"
-      style="max-height: 100vh"
+      *ngIf="activeTool !== 'eraser' && showSettings"
+      class="mt-2 shadow-4 text-sm bg-white border-round-lg p-3 mx-1 pointer-events-auto w-18rem overflow-y-auto absolute top-0 left-0"
+      style="max-height: 90vh; margin-top: 85px"
     >
       <div class="flex justify-content-between align-items-center mb-3">
         <span class="font-bold uppercase text-500"
-          >{{ activeTool }}</span
+          >{{ activeTool }} Settings</span
         >
         <button
           pButton
@@ -94,52 +118,67 @@
       </div>
 
       <div class="flex flex-column gap-3 mb-4">
-        <div class="flex align-items-center gap-1">
-          <label>Size</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Size</label>
           <input
             type="range"
             min="1"
             max="100"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].size"
           />
-          <span class="val">{{ tools[activeTool].size }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].size
+          }}</span>
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Thinning</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Thinning</label>
           <input
             type="range"
             min="0"
             max="1"
             step="0.01"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].thinning"
           />
-          <span class="val">{{ tools[activeTool].thinning }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].thinning
+          }}</span>
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Streamline</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Streamline</label>
           <input
             type="range"
             min="0"
             max="1"
             step="0.01"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].streamline"
           />
-          <span class="val">{{ tools[activeTool].streamline }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].streamline
+          }}</span>
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Smoothing</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Smoothing</label>
           <input
             type="range"
             min="0"
             max="1"
             step="0.01"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].smoothing"
           />
-          <span class="val">{{ tools[activeTool].smoothing }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].smoothing
+          }}</span>
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Easing</label>
-          <select [(ngModel)]="tools[activeTool].easing">
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Easing</label>
+          <select
+            [(ngModel)]="tools[activeTool].easing"
+            class="flex-grow-1 p-1"
+          >
             <option *ngFor="let opt of easingOptions" [value]="opt.value">
               {{ opt.label }}
             </option>
@@ -150,19 +189,25 @@
       <hr class="border-200" />
 
       <div class="flex flex-column gap-3 my-4">
-        <div class="flex align-items-center gap-1">
-          <label>Taper Start</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Taper Start</label>
           <input
             type="range"
             min="0"
             max="100"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].start.taper"
           />
-          <span class="val">{{ tools[activeTool].start.taper }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].start.taper
+          }}</span>
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Easing Start</label>
-          <select [(ngModel)]="tools[activeTool].start.easing">
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Easing Start</label>
+          <select
+            [(ngModel)]="tools[activeTool].start.easing"
+            class="flex-grow-1 p-1"
+          >
             <option *ngFor="let opt of easingOptions" [value]="opt.value">
               {{ opt.label }}
             </option>
@@ -173,19 +218,25 @@
       <hr class="border-200" />
 
       <div class="flex flex-column gap-3 my-4">
-        <div class="flex align-items-center gap-1">
-          <label>Taper End</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Taper End</label>
           <input
             type="range"
             min="0"
             max="100"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].end.taper"
           />
-          <span class="val">{{ tools[activeTool].end.taper }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].end.taper
+          }}</span>
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Easing End</label>
-          <select [(ngModel)]="tools[activeTool].end.easing">
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Easing End</label>
+          <select
+            [(ngModel)]="tools[activeTool].end.easing"
+            class="flex-grow-1 p-1"
+          >
             <option *ngFor="let opt of easingOptions" [value]="opt.value">
               {{ opt.label }}
             </option>
@@ -197,25 +248,28 @@
 
       <div class="flex flex-column gap-3 mt-4">
         <div class="flex align-items-center justify-content-between">
-          <label class="">Fill Color</label>
+          <label>Fill Color</label>
           <input
             type="color"
             [(ngModel)]="tools[activeTool].color"
             class="w-3rem h-2rem border-none cursor-pointer"
           />
         </div>
-        <div class="flex align-items-center gap-1">
-          <label>Stroke Width</label>
+        <div class="flex align-items-center gap-2">
+          <label class="w-5rem">Stroke</label>
           <input
             type="range"
             min="0"
             max="100"
+            class="flex-grow-1"
             [(ngModel)]="tools[activeTool].outline.width"
           />
-          <span class="val">{{ tools[activeTool].outline.width }}</span>
+          <span class="val w-2rem text-right">{{
+            tools[activeTool].outline.width
+          }}</span>
         </div>
         <div class="flex align-items-center justify-content-between">
-          <label class="">Stroke Color</label>
+          <label>Stroke Color</label>
           <input
             type="color"
             [(ngModel)]="tools[activeTool].outline.color"
@@ -232,6 +286,8 @@
     (pointerdown)="onPointerDown($event)"
     (pointermove)="onPointerMove($event)"
     (pointerup)="onPointerUp()"
+    (dragover)="$event.preventDefault()"
+    (drop)="onFileDrop($event)"
   >
     <g *ngFor="let s of allStrokes">
       <path

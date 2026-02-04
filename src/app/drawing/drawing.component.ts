@@ -17,29 +17,19 @@ const EASINGS: Record<string, (t: number) => number> = {
   easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   easeInCubic: (t) => t * t * t,
   easeOutCubic: (t) => 1 - Math.pow(1 - t, 3),
-  easeInOutCubic: (t) =>
-    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  easeInOutCubic: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
   easeInQuart: (t) => t * t * t * t,
   easeOutQuart: (t) => 1 - Math.pow(1 - t, 4),
-  easeInOutQuart: (t) =>
-    t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2,
+  easeInOutQuart: (t) => t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2,
   easeInQuint: (t) => t * t * t * t * t,
   easeOutQuint: (t) => 1 - Math.pow(1 - t, 5),
-  easeInOutQuint: (t) =>
-    t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2,
+  easeInOutQuint: (t) => t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2,
   easeInSine: (t) => 1 - Math.cos((t * Math.PI) / 2),
   easeOutSine: (t) => Math.sin((t * Math.PI) / 2),
   easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
   easeInExpo: (t) => (t === 0 ? 0 : Math.pow(2, 10 * t - 10)),
   easeOutExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
-  easeInOutExpo: (t) =>
-    t === 0
-      ? 0
-      : t === 1
-        ? 1
-        : t < 0.5
-          ? Math.pow(2, 20 * t - 10) / 2
-          : (2 - Math.pow(2, -20 * t + 10)) / 2,
+  easeInOutExpo: (t) => t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2,
 };
 
 @Component({
@@ -53,14 +43,12 @@ export class DrawingComponent {
   allStrokes: DrawingStroke[] = [];
   redoStack: DrawingStroke[] = [];
   activeTool: 'pen1' | 'pen2' | 'highlighter' | 'eraser' = 'pen1';
+  showSettings: boolean = true; // For Hamburger toggle
 
   currentPoints: number[][] = [];
   previewPath: string = '';
 
-  easingOptions = Object.keys(EASINGS).map((key) => ({
-    label: key,
-    value: key,
-  }));
+  easingOptions = Object.keys(EASINGS).map((key) => ({ label: key, value: key }));
 
   tools: any = {
     pen1: this.getDefaultTool('#eb454a', 16),
@@ -71,17 +59,18 @@ export class DrawingComponent {
 
   private getDefaultTool(color: string, size: number, opacity: number = 1) {
     return {
-      color,
-      size,
-      opacity,
-      thinning: 0.5,
-      streamline: 0.5,
-      smoothing: 0.23,
-      easing: 'linear',
+      color, size, opacity,
+      thinning: 0.5, streamline: 0.5, smoothing: 0.23, easing: 'linear',
       start: { taper: 0, easing: 'linear' },
       end: { taper: 0, easing: 'linear' },
       outline: { color: '#9747ff', width: 0 },
     };
+  }
+
+  // --- UTILITIES ---
+
+  toggleSettings() {
+    this.showSettings = !this.showSettings;
   }
 
   resetPenSettings() {
@@ -92,11 +81,7 @@ export class DrawingComponent {
       highlighter: { color: '#ffeb3b', size: 30, opacity: 0.4 },
     };
     const d = (defaults as any)[this.activeTool];
-    this.tools[this.activeTool] = this.getDefaultTool(
-      d.color,
-      d.size,
-      d.opacity || 1,
-    );
+    this.tools[this.activeTool] = this.getDefaultTool(d.color, d.size, d.opacity || 1);
   }
 
   undo() {
@@ -114,14 +99,58 @@ export class DrawingComponent {
     this.redoStack = [];
   }
 
+  // --- FILE I/O ---
+
+  onFileDrop(event: DragEvent) {
+  event.preventDefault();
+  if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    this.parseSVGFile(event.dataTransfer.files[0]);
+  }
+}
+
+  triggerUpload() {
+    const fileInput = document.getElementById('svgUpload') as HTMLInputElement;
+    fileInput.click();
+  }
+
+  handleFileUpload(event: any) {
+    const file = event.target.files[0];
+    if (file) this.parseSVGFile(file);
+  }
+
+  parseSVGFile(file: File) {
+    if (!file || (!file.type.includes('svg') && !file.name.endsWith('.svg'))) return;
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'image/svg+xml');
+      const paths = doc.querySelectorAll('path');
+      const imported: DrawingStroke[] = [];
+      
+      paths.forEach(p => {
+        const d = p.getAttribute('d');
+        if (d) {
+          imported.push({
+            path: d,
+            color: p.getAttribute('fill') || '#000000',
+            opacity: parseFloat(p.getAttribute('fill-opacity') || '1'),
+            outlineColor: p.getAttribute('stroke') || 'none',
+            outlineWidth: parseFloat(p.getAttribute('stroke-width') || '0'),
+            points: [] // Coordinates are lost in static SVG, but path remains erasable
+          });
+        }
+      });
+      this.allStrokes = [...this.allStrokes, ...imported];
+    };
+    reader.readAsText(file);
+  }
+
   saveSVG() {
     const svgEl = this.svgElement.nativeElement;
     svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     const svgData = svgEl.outerHTML;
     const preface = '<?xml version="1.0" standalone="no"?>\r\n';
-    const blob = new Blob([preface, svgData], {
-      type: 'image/svg+xml;charset=utf-8',
-    });
+    const blob = new Blob([preface, svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -129,30 +158,20 @@ export class DrawingComponent {
     link.click();
   }
 
-  // --- CORE DRAWING LOGIC ---
+  // --- DRAWING CORE ---
 
   private getLibOptions() {
     const t = this.tools[this.activeTool];
     return {
-      size: t.size,
-      thinning: t.thinning,
-      streamline: t.streamline,
-      smoothing: t.smoothing,
+      size: t.size, thinning: t.thinning, streamline: t.streamline, smoothing: t.smoothing,
       easing: EASINGS[t.easing],
-      start: {
-        taper: t.start.taper,
-        easing: EASINGS[t.start.easing],
-        cap: true,
-      },
+      start: { taper: t.start.taper, easing: EASINGS[t.start.easing], cap: true },
       end: { taper: t.end.taper, easing: EASINGS[t.end.easing], cap: true },
     };
   }
 
   onPointerDown(e: PointerEvent) {
-    if (this.activeTool === 'eraser') {
-      this.erase(e);
-      return;
-    }
+    if (this.activeTool === 'eraser') { this.erase(e); return; }
     const { x, y } = this.getCoords(e);
     this.currentPoints = [[x, y, e.pressure]];
     this.redoStack = [];
@@ -160,15 +179,10 @@ export class DrawingComponent {
 
   onPointerMove(e: PointerEvent) {
     if (e.buttons !== 1) return;
-    if (this.activeTool === 'eraser') {
-      this.erase(e);
-      return;
-    }
+    if (this.activeTool === 'eraser') { this.erase(e); return; }
     const { x, y } = this.getCoords(e);
     this.currentPoints = [...this.currentPoints, [x, y, e.pressure]];
-    this.previewPath = this.getSvgPathFromStroke(
-      getStroke(this.currentPoints, this.getLibOptions()),
-    );
+    this.previewPath = this.getSvgPathFromStroke(getStroke(this.currentPoints, this.getLibOptions()));
   }
 
   onPointerUp() {
@@ -189,11 +203,8 @@ export class DrawingComponent {
 
   private erase(e: PointerEvent) {
     const { x, y } = this.getCoords(e);
-    this.allStrokes = this.allStrokes.filter(
-      (s) =>
-        !s.points.some(
-          (p) => Math.hypot(p[0] - x, p[1] - y) < this.tools.eraser.size,
-        ),
+    this.allStrokes = this.allStrokes.filter(s => 
+      !s.points.some(p => Math.hypot(p[0] - x, p[1] - y) < this.tools.eraser.size)
     );
   }
 
@@ -204,14 +215,11 @@ export class DrawingComponent {
 
   private getSvgPathFromStroke(stroke: number[][]) {
     if (!stroke.length) return '';
-    const d = stroke.reduce(
-      (acc, [x0, y0], i, _arr) => {
-        const [x1, y1] = _arr[(i + 1) % _arr.length];
-        acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
-        return acc;
-      },
-      ['M', ...stroke[0], 'Q'],
-    );
+    const d = stroke.reduce((acc, [x0, y0], i, _arr) => {
+      const [x1, y1] = _arr[(i + 1) % _arr.length];
+      acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+      return acc;
+    }, ['M', ...stroke[0], 'Q']);
     d.push('Z');
     return d.join(' ');
   }
