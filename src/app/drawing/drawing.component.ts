@@ -1,4 +1,10 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { getStroke } from 'perfect-freehand';
 import { QlIframeMessageService } from '../main.service';
 
@@ -67,6 +73,53 @@ export class DrawingComponent {
   currentSvgBase64: string = '';
 
   constructor(private mainService: QlIframeMessageService) {}
+
+  // ----------------handling window events to get the data from the parent app :
+  
+  ngOnInit() {
+    // Listen for messages from the Parent Window
+    window.addEventListener('message', this.handleParentMessage.bind(this));
+  }
+
+  ngOnDestroy() {
+    // Clean up listener to prevent memory leaks
+    window.removeEventListener('message', this.handleParentMessage.bind(this));
+  }
+
+  handleParentMessage(event: MessageEvent) {
+    // Security: It is highly recommended to check the origin
+    // if (event.origin !== 'https://your-parent-app.com') return;
+
+    const message = event.data;
+
+    // Check if the message type matches what your parent sends
+    if (message.type === 'LOAD_SVG_TO_EDIT' && message.payload) {
+      this.importFromBase64(message.payload);
+    }
+  }
+
+  private importFromBase64(base64String: string) {
+    // Clear current canvas before loading new data
+    this.clearCanvas();
+
+    // Remove the Data URI prefix if it exists to get the raw base64
+    const base64Data = base64String.split(',')[1] || base64String;
+
+    try {
+      const decodedSvg = decodeURIComponent(escape(window.atob(base64Data)));
+
+      // We convert the string to a File-like object to reuse your existing parser
+      const blob = new Blob([decodedSvg], { type: 'image/svg+xml' });
+      const file = new File([blob], 'imported.svg', { type: 'image/svg+xml' });
+
+      this.parseSVGFile(file);
+      console.log('Successfully loaded SVG from Parent');
+    } catch (error) {
+      console.error('Error decoding SVG from parent:', error);
+    }
+  }
+
+  // ------------------------------------
 
   tools: any = {
     pen1: this.getDefaultTool('#eb454a', 16),
