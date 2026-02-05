@@ -75,7 +75,7 @@ export class DrawingComponent {
   constructor(private mainService: QlIframeMessageService) {}
 
   // ----------------handling window events to get the data from the parent app :
-  
+
   ngOnInit() {
     // Listen for messages from the Parent Window
     window.addEventListener('message', this.handleParentMessage.bind(this));
@@ -236,7 +236,7 @@ export class DrawingComponent {
           });
         }
       });
-      this.allStrokes = [...this.allStrokes, ...imported];
+      this.allStrokes = [...imported];
     };
     reader.readAsText(file);
   }
