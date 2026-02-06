@@ -257,7 +257,7 @@ export class DrawingComponent {
     const svgEl = this.svgElement.nativeElement;
     //capturing the svg and converting to base64 string
     this.currentSvgBase64 = captureSvgAsBase64(svgEl);
-    this.sendAddObject(this.currentSvgBase64, 'imagebox', {
+    this.sendAddObject(this.currentSvgBase64, 'stickerbox', {
       svgPathString: this.metaSvgPathString, // it is reduced svg string from the getSvgFromStroke method.
       getStrokeTwoPointArrayData: this.getStrokeTwoPointArrayData, // this is two point 2d array which defined by the getStroke() method 
       // of the perfect free hand package.
