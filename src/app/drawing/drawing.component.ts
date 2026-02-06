@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 
-import { getStroke } from 'perfect-freehand';
+import { getStroke, Vec2 } from 'perfect-freehand';
 
 import { DrawingStroke } from '../models/drawing.model';
 import { IframeMessageType } from '../models/drawing.model';
@@ -24,7 +24,6 @@ import { getSvgPathFromStroke } from '../utils/getSvgPathFromStroke';
 @Component({
   selector: 'app-drawing',
   templateUrl: './drawing.component.html',
-  styleUrls: ['./drawing.component.scss'],
 })
 export class DrawingComponent {
   @ViewChild('svgElement') svgElement!: ElementRef<SVGElement>;
@@ -62,17 +61,16 @@ export class DrawingComponent {
     // Security: It is highly recommended to check the origin
     // if (event.origin !== 'https://your-parent-app.com') return;
 
-    const message = event.data;
+    const data = event.data;
 
     // Check if the message type matches what your parent sends
-    if (message.type === 'LOAD_SVG_TO_EDIT' && message.payload) {
-      this.importFromBase64(message.payload);
+    if (data.message === 'edit-layout-object') {
+      this.importFromBase64(data.payload);
     }
   }
 
   private importFromBase64(base64String: string) {
-    // Clear current canvas before loading new data
-    this.clearCanvas();
+    // Clear current canvas before loading new data and then importing the svg
     importFromBase64(base64String, this.clearCanvas);
   }
 
@@ -180,6 +178,8 @@ export class DrawingComponent {
     this.redoStack = [];
   }
 
+  getStrokeTwoPointArrayData!: Vec2[];
+
   onPointerMove(e: PointerEvent) {
     if (e.buttons !== 1) return;
     if (this.activeTool === 'eraser') {
@@ -188,13 +188,15 @@ export class DrawingComponent {
     }
     const { x, y } = this.getCoords(e);
     this.currentPoints = [...this.currentPoints, [x, y, e.pressure]];
-    this.previewPath = this.getSvgPathFromStroke(
-      getStroke(this.currentPoints, this.getLibOptions()),
-    );
+    ((this.getStrokeTwoPointArrayData = getStroke(this.currentPoints, this.getLibOptions())),
+      (this.previewPath = this.getSvgPathFromStroke(this.getStrokeTwoPointArrayData)));
   }
 
+  metaSvgPathString = '';
+
   private getSvgPathFromStroke(stroke: number[][]): string {
-    return getSvgPathFromStroke(stroke);
+    this.metaSvgPathString = getSvgPathFromStroke(stroke);
+    return this.metaSvgPathString;
   }
 
   onPointerUp() {
@@ -255,6 +257,10 @@ export class DrawingComponent {
     const svgEl = this.svgElement.nativeElement;
     //capturing the svg and converting to base64 string
     this.currentSvgBase64 = captureSvgAsBase64(svgEl);
-    this.sendAddObject(this.currentSvgBase64, 'imagebox');
+    this.sendAddObject(this.currentSvgBase64, 'imagebox', {
+      svgPathString: this.metaSvgPathString, // it is reduced svg string from the getSvgFromStroke method.
+      getStrokeTwoPointArrayData: this.getStrokeTwoPointArrayData, // this is two point 2d array which defined by the getStroke() method 
+      // of the perfect free hand package.
+    });
   }
 }
