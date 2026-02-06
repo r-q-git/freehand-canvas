@@ -1,53 +1,25 @@
-import {
-  Component,
-  ElementRef,
-  ViewChild,
-  OnInit,
-  OnDestroy,
-} from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
+
 import { getStroke } from 'perfect-freehand';
-import { QlIframeMessageService } from '../main.service';
 
-interface DrawingStroke {
-  points: number[][];
-  path: string;
-  color: string;
-  opacity: number;
-  outlineColor: string;
-  outlineWidth: number;
-}
+import { DrawingStroke } from '../models/drawing.model';
+import { IframeMessageType } from '../models/drawing.model';
 
-const EASINGS: Record<string, (t: number) => number> = {
-  linear: (t) => t,
-  easeInQuad: (t) => t * t,
-  easeOutQuad: (t) => t * (2 - t),
-  easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
-  easeInCubic: (t) => t * t * t,
-  easeOutCubic: (t) => 1 - Math.pow(1 - t, 3),
-  easeInOutCubic: (t) =>
-    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
-  easeInQuart: (t) => t * t * t * t,
-  easeOutQuart: (t) => 1 - Math.pow(1 - t, 4),
-  easeInOutQuart: (t) =>
-    t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2,
-  easeInQuint: (t) => t * t * t * t * t,
-  easeOutQuint: (t) => 1 - Math.pow(1 - t, 5),
-  easeInOutQuint: (t) =>
-    t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2,
-  easeInSine: (t) => 1 - Math.cos((t * Math.PI) / 2),
-  easeOutSine: (t) => Math.sin((t * Math.PI) / 2),
-  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
-  easeInExpo: (t) => (t === 0 ? 0 : Math.pow(2, 10 * t - 10)),
-  easeOutExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
-  easeInOutExpo: (t) =>
-    t === 0
-      ? 0
-      : t === 1
-        ? 1
-        : t < 0.5
-          ? Math.pow(2, 20 * t - 10) / 2
-          : (2 - Math.pow(2, -20 * t + 10)) / 2,
-};
+import { QlIframeMessageService } from '../services/QlIframeMessageService';
+import { EASINGS } from '../utils/easingMethods';
+
+import { captureSvgAsBase64 } from '../utils/captureSvgAsBase64';
+import { saveSVG } from '../utils/saveSvg';
+import { parseSVGFile } from '../utils/parseSvgFile';
+import { importFromBase64 } from '../utils/importFromBase64';
+import {
+  getDefaultTool,
+  getDefaultToolPen1,
+  getDefaultToolPen2,
+  getDefaultToolHighlighter,
+} from '../utils/getDefaultTool';
+
+import { getSvgPathFromStroke } from '../utils/getSvgPathFromStroke';
 
 @Component({
   selector: 'app-drawing',
@@ -60,7 +32,6 @@ export class DrawingComponent {
   allStrokes: DrawingStroke[] = [];
   redoStack: DrawingStroke[] = [];
   activeTool: 'pen1' | 'pen2' | 'highlighter' | 'eraser' = 'pen1';
-  showSettings: boolean = false; // For Hamburger toggle
 
   currentPoints: number[][] = [];
   previewPath: string = '';
@@ -70,19 +41,20 @@ export class DrawingComponent {
     value: key,
   }));
 
-  currentSvgBase64: string = '';
+  tools: any = {
+    pen1: getDefaultToolPen1('#eb454a', 16),
+    pen2: getDefaultToolPen2('#3b82f6', 16),
+    highlighter: getDefaultToolHighlighter('#ffeb3b', 30, 0.4),
+    eraser: { size: 40 },
+  };
 
-  constructor(private mainService: QlIframeMessageService) {}
-
-  // ----------------handling window events to get the data from the parent app :
+  // ----------handling window events to get the data from the parent app :
 
   ngOnInit() {
-    // Listen for messages from the Parent Window
     window.addEventListener('message', this.handleParentMessage.bind(this));
   }
 
   ngOnDestroy() {
-    // Clean up listener to prevent memory leaks
     window.removeEventListener('message', this.handleParentMessage.bind(this));
   }
 
@@ -101,49 +73,11 @@ export class DrawingComponent {
   private importFromBase64(base64String: string) {
     // Clear current canvas before loading new data
     this.clearCanvas();
-
-    // Remove the Data URI prefix if it exists to get the raw base64
-    const base64Data = base64String.split(',')[1] || base64String;
-
-    try {
-      const decodedSvg = decodeURIComponent(escape(window.atob(base64Data)));
-
-      // We convert the string to a File-like object to reuse your existing parser
-      const blob = new Blob([decodedSvg], { type: 'image/svg+xml' });
-      const file = new File([blob], 'imported.svg', { type: 'image/svg+xml' });
-
-      this.parseSVGFile(file);
-      console.log('Successfully loaded SVG from Parent');
-    } catch (error) {
-      console.error('Error decoding SVG from parent:', error);
-    }
+    importFromBase64(base64String, this.clearCanvas);
   }
 
-  // ------------------------------------
-
-  tools: any = {
-    pen1: this.getDefaultTool('#eb454a', 16),
-    pen2: this.getDefaultTool('#3b82f6', 16),
-    highlighter: this.getDefaultTool('#ffeb3b', 30, 0.4),
-    eraser: { size: 40 },
-  };
-
-  private getDefaultTool(color: string, size: number, opacity: number = 1) {
-    return {
-      color,
-      size,
-      opacity,
-      thinning: 0.5,
-      streamline: 0.5,
-      smoothing: 0.23,
-      easing: 'linear',
-      start: { taper: 0, easing: 'linear' },
-      end: { taper: 0, easing: 'linear' },
-      outline: { color: '#9747ff', width: 0 },
-    };
-  }
-
-  // --- UTILITIES ---
+  // ------------------- UTILITIES -----------------
+  showSettings: boolean = false; // Hamburger toggle
 
   toggleSettings() {
     this.showSettings = !this.showSettings;
@@ -157,7 +91,7 @@ export class DrawingComponent {
       highlighter: { color: '#ffeb3b', size: 30, opacity: 0.4 },
     };
     const d = (defaults as any)[this.activeTool];
-    this.tools[this.activeTool] = this.getDefaultTool(
+    this.tools[this.activeTool] = getDefaultTool(
       d.color,
       d.size,
       d.opacity || 1,
@@ -179,7 +113,7 @@ export class DrawingComponent {
     this.redoStack = [];
   }
 
-  // --- FILE I/O ---
+  // --------------- FILE I/O -----------------------
 
   onFileDrop(event: DragEvent) {
     event.preventDefault();
@@ -203,60 +137,19 @@ export class DrawingComponent {
   }
 
   parseSVGFile(file: File) {
-    if (!file || (!file.type.includes('svg') && !file.name.endsWith('.svg')))
-      return;
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(e.target.result, 'image/svg+xml');
-      const paths = doc.querySelectorAll('path');
-      const imported: DrawingStroke[] = [];
-
-      paths.forEach((p) => {
-        const d = p.getAttribute('d');
-        if (d) {
-          // --- NEW LOGIC TO FIX ERASER ---
-          // We extract the numbers from the 'd' attribute to simulate points
-          // This regex finds all coordinate pairs like "100 200"
-          const coords = d.match(/[+-]?\d+(\.\d+)?/g)?.map(Number) || [];
-          const simulatedPoints: number[][] = [];
-          for (let i = 0; i < coords.length; i += 2) {
-            if (coords[i + 1] !== undefined) {
-              simulatedPoints.push([coords[i], coords[i + 1]]);
-            }
-          }
-
-          imported.push({
-            path: d,
-            color: p.getAttribute('fill') || '#000000',
-            opacity: parseFloat(p.getAttribute('fill-opacity') || '1'),
-            outlineColor: p.getAttribute('stroke') || 'none',
-            outlineWidth: parseFloat(p.getAttribute('stroke-width') || '0'),
-            points: simulatedPoints, // Now the eraser has data to check!
-          });
-        }
-      });
-      this.allStrokes = [...imported];
-    };
-    reader.readAsText(file);
+    parseSVGFile(file).then((strokes) => {
+      this.allStrokes = strokes;
+    });
   }
+
+  // -----------------Save File ------------------------------
 
   saveSVG() {
     const svgEl = this.svgElement.nativeElement;
-    svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    const svgData = svgEl.outerHTML;
-    const preface = '<?xml version="1.0" standalone="no"?>\r\n';
-    const blob = new Blob([preface, svgData], {
-      type: 'image/svg+xml;charset=utf-8',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `drawing-${Date.now()}.svg`;
-    link.click();
+    saveSVG(svgEl);
   }
 
-  // --- DRAWING CORE ---
+  // -------------- DRAWING CORE ------------------------------
 
   private getLibOptions() {
     const t = this.tools[this.activeTool];
@@ -274,6 +167,8 @@ export class DrawingComponent {
       end: { taper: t.end.taper, easing: EASINGS[t.end.easing], cap: true },
     };
   }
+
+  // ------------------Control Methods------------------
 
   onPointerDown(e: PointerEvent) {
     if (this.activeTool === 'eraser') {
@@ -296,6 +191,10 @@ export class DrawingComponent {
     this.previewPath = this.getSvgPathFromStroke(
       getStroke(this.currentPoints, this.getLibOptions()),
     );
+  }
+
+  private getSvgPathFromStroke(stroke: number[][]): string {
+    return getSvgPathFromStroke(stroke);
   }
 
   onPointerUp() {
@@ -329,49 +228,33 @@ export class DrawingComponent {
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  private getSvgPathFromStroke(stroke: number[][]) {
-    if (!stroke.length) return '';
-    const d = stroke.reduce(
-      (acc, [x0, y0], i, _arr) => {
-        const [x1, y1] = _arr[(i + 1) % _arr.length];
-        acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
-        return acc;
+  // ------- send to parent method ---------------------------
+
+  currentSvgBase64: string = '';
+
+  sendAddObject(
+    dataString: string,
+    type: 'imagebox' | 'stickerbox' | 'textbox' | 'svg',
+    metaData?: Record<string, any>,
+    targetOrigin: string = '*',
+  ) {
+    QlIframeMessageService.sendMessageToParent(
+      {
+        type: IframeMessageType.ADD_OBJECT,
+        payload: {
+          dataString,
+          type,
+          metaData,
+        },
       },
-      ['M', ...stroke[0], 'Q'],
+      targetOrigin,
     );
-    d.push('Z');
-    return d.join(' ');
-  }
-
-  captureSvgAsBase64() {
-    const svgEl = this.svgElement.nativeElement;
-
-    // 1. Ensure the namespace is present for standalone rendering
-    svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
-    // 2. Get the outer HTML (the XML string)
-    const svgData = new XMLSerializer().serializeToString(svgEl);
-
-    // 3. Encode to Base64
-    // We use btoa() for the encoding.
-    // encodeURIComponent + unescape handles special characters (like emojis or symbols) safely.
-    const base64 = window.btoa(unescape(encodeURIComponent(svgData)));
-
-    // 4. Create the Data URI
-    this.currentSvgBase64 = `data:image/svg+xml;base64,${base64}`;
-
-    // Log it or pass it to your required method
-    console.log('Generated Base64:', this.currentSvgBase64);
   }
 
   sendToProject() {
-    this.captureSvgAsBase64();
-    QlIframeMessageService.sendMessageToParent({
-      type: 'ADD_OBJECT',
-      payload: {
-        dataString: this.currentSvgBase64, // svg string
-        type: 'stickerbox',
-      },
-    });
+    const svgEl = this.svgElement.nativeElement;
+    //capturing the svg and converting to base64 string
+    this.currentSvgBase64 = captureSvgAsBase64(svgEl);
+    this.sendAddObject(this.currentSvgBase64, 'imagebox');
   }
 }

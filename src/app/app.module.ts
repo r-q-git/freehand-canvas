@@ -10,7 +10,6 @@ import { SliderModule } from 'primeng/slider';
 
 import { AppComponent } from './app.component';
 import { DrawingComponent } from './drawing/drawing.component';
-import { AppRoutingModule } from './app-routing.module';
 
 @NgModule({
   declarations: [
@@ -24,7 +23,6 @@ import { AppRoutingModule } from './app-routing.module';
     ButtonModule,
     ColorPickerModule,
     SliderModule,
-    AppRoutingModule
   ],
   providers: [],
   bootstrap: [AppComponent]
